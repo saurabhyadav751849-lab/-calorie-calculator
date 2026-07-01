@@ -1,0 +1,650 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tally — Food Calorie Ledger</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Roboto+Slab:wght@500;700;900&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper: #EBDFC6;
+    --paper-light: #F6EFDD;
+    --paper-dark: #DCCBA3;
+    --ink: #2B2622;
+    --ink-soft: #5C5347;
+    --mustard: #C8930A;
+    --basil: #4A7043;
+    --tomato: #B8401D;
+    --rule: rgba(43,38,34,0.18);
+    --shadow: 0 18px 40px -20px rgba(43,38,34,0.45);
+  }
+
+  *{ box-sizing: border-box; }
+
+  html,body{
+    margin:0; padding:0;
+    background: var(--paper-dark);
+    color: var(--ink);
+    font-family: 'Inter', sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  body{
+    min-height: 100vh;
+    background-image:
+      radial-gradient(circle at 1px 1px, rgba(43,38,34,0.05) 1px, transparent 0);
+    background-size: 18px 18px;
+    padding: 40px 20px 80px;
+  }
+
+  .wrap{
+    max-width: 1080px;
+    margin: 0 auto;
+  }
+
+  header{
+    display:flex;
+    align-items:flex-end;
+    justify-content:space-between;
+    flex-wrap:wrap;
+    gap: 16px;
+    margin-bottom: 28px;
+    border-bottom: 3px solid var(--ink);
+    padding-bottom: 18px;
+  }
+
+  .brand{
+    display:flex;
+    flex-direction:column;
+    gap: 4px;
+  }
+
+  .brand .eyebrow{
+    font-family:'IBM Plex Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+  }
+
+  .brand h1{
+    font-family:'Roboto Slab', serif;
+    font-weight: 900;
+    font-size: clamp(34px, 5vw, 52px);
+    margin: 0;
+    letter-spacing: -0.01em;
+    line-height: 0.95;
+  }
+
+  .brand h1 span{ color: var(--tomato); }
+
+  .brand p{
+    margin: 2px 0 0;
+    font-size: 14px;
+    color: var(--ink-soft);
+    max-width: 46ch;
+  }
+
+  .goal-box{
+    background: var(--ink);
+    color: var(--paper-light);
+    padding: 12px 18px;
+    border-radius: 4px;
+    display:flex;
+    align-items:center;
+    gap: 10px;
+    font-family:'IBM Plex Mono', monospace;
+  }
+  .goal-box label{ font-size: 11px; letter-spacing:0.08em; text-transform:uppercase; opacity:0.75; }
+  .goal-box input{
+    width: 84px;
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid rgba(246,239,221,0.5);
+    color: var(--paper-light);
+    font-family:'IBM Plex Mono', monospace;
+    font-size: 20px;
+    font-weight: 600;
+    padding: 2px 0;
+  }
+  .goal-box input:focus{ outline:none; border-bottom-color: var(--mustard); }
+
+  .layout{
+    display:grid;
+    grid-template-columns: 1.4fr 1fr;
+    gap: 28px;
+    align-items:start;
+  }
+
+  @media (max-width: 860px){
+    .layout{ grid-template-columns: 1fr; }
+  }
+
+  /* ---- Left: search + food list ---- */
+  .panel{
+    background: var(--paper-light);
+    border: 1px solid var(--rule);
+    border-radius: 6px;
+    box-shadow: var(--shadow);
+  }
+
+  .search-bar{
+    padding: 18px 20px;
+    border-bottom: 2px dashed var(--rule);
+  }
+
+  .search-bar input{
+    width:100%;
+    font-family:'Inter', sans-serif;
+    font-size: 16px;
+    padding: 12px 14px;
+    border: 1.5px solid var(--ink);
+    border-radius: 4px;
+    background: var(--paper-light);
+    color: var(--ink);
+  }
+  .search-bar input:focus{ outline: 2px solid var(--mustard); outline-offset: 1px; }
+
+  .categories{
+    display:flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    padding: 14px 20px 0;
+  }
+
+  .chip{
+    font-family:'IBM Plex Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    padding: 6px 12px;
+    border-radius: 999px;
+    border: 1px solid var(--ink);
+    background: transparent;
+    cursor: pointer;
+    color: var(--ink);
+  }
+  .chip.active{ background: var(--ink); color: var(--paper-light); }
+  .chip:hover{ background: var(--ink); color: var(--paper-light); }
+
+  .food-list{
+    max-height: 560px;
+    overflow-y: auto;
+    padding: 10px 10px 18px;
+  }
+
+  .food-row{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap: 12px;
+    padding: 13px 10px;
+    border-bottom: 1px solid var(--rule);
+  }
+  .food-row:last-child{ border-bottom: none; }
+
+  .food-info{ display:flex; flex-direction:column; gap:2px; min-width:0; }
+  .food-info .name{ font-weight: 600; font-size: 15px; }
+  .food-info .meta{
+    font-family:'IBM Plex Mono', monospace;
+    font-size: 12px;
+    color: var(--ink-soft);
+  }
+
+  .add-btn{
+    flex-shrink:0;
+    font-family:'IBM Plex Mono', monospace;
+    font-weight: 600;
+    font-size: 13px;
+    background: var(--basil);
+    color: var(--paper-light);
+    border: none;
+    padding: 9px 14px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: transform 0.08s ease, background 0.15s ease;
+  }
+  .add-btn:hover{ background: #3b5936; }
+  .add-btn:active{ transform: scale(0.94); }
+
+  .empty-note{
+    padding: 30px 20px;
+    text-align:center;
+    color: var(--ink-soft);
+    font-size: 14px;
+  }
+
+  /* ---- Right: receipt ---- */
+  .receipt-shell{
+    position: sticky;
+    top: 24px;
+  }
+
+  .receipt{
+    background: var(--paper-light);
+    border: 1px solid var(--rule);
+    box-shadow: var(--shadow);
+    font-family: 'IBM Plex Mono', monospace;
+    position: relative;
+    padding: 26px 22px 0;
+  }
+
+  .receipt-head{
+    text-align:center;
+    border-bottom: 2px dashed var(--rule);
+    padding-bottom: 16px;
+    margin-bottom: 6px;
+  }
+
+  .receipt-head .store{
+    font-family:'Roboto Slab', serif;
+    font-weight: 900;
+    font-size: 22px;
+    letter-spacing: 0.02em;
+  }
+  .receipt-head .sub{
+    font-size: 11px;
+    color: var(--ink-soft);
+    margin-top: 4px;
+    letter-spacing: 0.04em;
+  }
+
+  .receipt-items{
+    padding: 10px 0 6px;
+    min-height: 70px;
+  }
+
+  .receipt-item{
+    display:flex;
+    justify-content:space-between;
+    gap: 10px;
+    font-size: 13px;
+    padding: 7px 0;
+    border-bottom: 1px dotted var(--rule);
+  }
+
+  .receipt-item .left{ display:flex; flex-direction:column; gap:2px; min-width:0; }
+  .receipt-item .iname{ font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width: 180px; }
+  .receipt-item .qtyline{ color: var(--ink-soft); font-size: 11px; display:flex; align-items:center; gap:6px; }
+
+  .qty-btn{
+    background: none;
+    border: 1px solid var(--ink);
+    color: var(--ink);
+    width: 18px; height: 18px;
+    line-height: 1;
+    border-radius: 3px;
+    cursor: pointer;
+    font-size: 12px;
+    font-family:'IBM Plex Mono', monospace;
+  }
+
+  .receipt-item .price{ font-weight:700; white-space:nowrap; }
+
+  .remove-x{
+    background:none; border:none; color: var(--tomato);
+    cursor:pointer; font-size: 13px; font-family:'IBM Plex Mono', monospace;
+    padding: 0 0 0 6px;
+  }
+
+  .receipt-empty{
+    text-align:center;
+    color: var(--ink-soft);
+    font-size: 13px;
+    padding: 30px 0;
+  }
+
+  .receipt-totals{
+    border-top: 2px dashed var(--rule);
+    margin-top: 6px;
+    padding: 14px 0;
+  }
+
+  .trow{
+    display:flex; justify-content:space-between;
+    font-size: 13px;
+    padding: 3px 0;
+  }
+  .trow.grand{
+    font-size: 22px;
+    font-weight: 700;
+    padding-top: 8px;
+    border-top: 1px solid var(--ink);
+    margin-top: 6px;
+  }
+
+  .status-line{
+    font-size: 12px;
+    text-align:center;
+    padding: 10px 0 4px;
+    font-weight: 600;
+  }
+  .status-line.under{ color: var(--basil); }
+  .status-line.over{ color: var(--tomato); }
+
+  .gauge{
+    height: 8px;
+    background: var(--paper-dark);
+    border-radius: 999px;
+    overflow: hidden;
+    margin: 4px 0 16px;
+  }
+  .gauge-fill{
+    height: 100%;
+    background: var(--basil);
+    transition: width 0.3s ease, background 0.3s ease;
+  }
+  .gauge-fill.over{ background: var(--tomato); }
+
+  .tear{
+    height: 16px;
+    background:
+      linear-gradient(-45deg, var(--paper-dark) 8px, transparent 0),
+      linear-gradient(45deg, var(--paper-dark) 8px, transparent 0);
+    background-size: 16px 16px;
+    background-position: bottom;
+    background-repeat: repeat-x;
+    margin: 0 -1px;
+  }
+
+  .clear-btn{
+    display:block;
+    width: 100%;
+    margin-top: 14px;
+    background: none;
+    border: 1.5px solid var(--ink);
+    color: var(--ink);
+    font-family:'IBM Plex Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    padding: 10px;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+  .clear-btn:hover{ background: var(--ink); color: var(--paper-light); }
+
+  footer{
+    text-align:center;
+    margin-top: 40px;
+    font-size: 12px;
+    color: var(--ink-soft);
+    font-family:'IBM Plex Mono', monospace;
+  }
+
+  ::-webkit-scrollbar{ width: 8px; }
+  ::-webkit-scrollbar-thumb{ background: var(--paper-dark); border-radius: 4px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="brand">
+      <div class="eyebrow">A running ledger, not a diet</div>
+      <h1>TALLY<span>.</span></h1>
+      <p>Search a food, add it to your ledger, watch the total climb. No accounts, no tracking — just today's tab.</p>
+    </div>
+    <div class="goal-box">
+      <label>Daily goal</label>
+      <input type="number" id="goalInput" value="2000" min="0" step="50">
+      <span>kcal</span>
+    </div>
+  </header>
+
+  <div class="layout">
+
+    <!-- LEFT: search + list -->
+    <div class="panel">
+      <div class="search-bar">
+        <input type="text" id="searchInput" placeholder="Search foods… e.g. banana, rice, chicken breast">
+      </div>
+      <div class="categories" id="categoryBar"></div>
+      <div class="food-list" id="foodList"></div>
+    </div>
+
+    <!-- RIGHT: receipt -->
+    <div class="receipt-shell">
+      <div class="receipt">
+        <div class="receipt-head">
+          <div class="store">TODAY'S TAB</div>
+          <div class="sub" id="dateLine"></div>
+        </div>
+        <div class="receipt-items" id="receiptItems"></div>
+        <div class="receipt-empty" id="receiptEmpty">Nothing added yet — pick a food on the left.</div>
+      </div>
+      <div class="receipt-totals" style="background:var(--paper-light); padding-left:22px; padding-right:22px; border-left:1px solid var(--rule); border-right:1px solid var(--rule);">
+        <div class="trow"><span>Items</span><span id="itemCount">0</span></div>
+        <div class="trow grand"><span>Total</span><span id="grandTotal">0 kcal</span></div>
+        <div class="status-line" id="statusLine"></div>
+        <div class="gauge"><div class="gauge-fill" id="gaugeFill" style="width:0%"></div></div>
+        <button class="clear-btn" id="clearBtn">Clear ledger</button>
+      </div>
+      <div class="tear"></div>
+    </div>
+
+  </div>
+
+  <footer>Values are typical estimates per common serving — real foods vary. Not medical advice.</footer>
+</div>
+
+<script>
+  const FOODS = [
+    // Fruits
+    {name:"Banana", cat:"Fruit", unit:"1 medium (118g)", kcal:105},
+    {name:"Apple", cat:"Fruit", unit:"1 medium (182g)", kcal:95},
+    {name:"Orange", cat:"Fruit", unit:"1 medium (131g)", kcal:62},
+    {name:"Mango", cat:"Fruit", unit:"1 cup sliced (165g)", kcal:99},
+    {name:"Grapes", cat:"Fruit", unit:"1 cup (151g)", kcal:104},
+    {name:"Strawberries", cat:"Fruit", unit:"1 cup (152g)", kcal:49},
+    {name:"Avocado", cat:"Fruit", unit:"1/2 fruit (100g)", kcal:160},
+    {name:"Watermelon", cat:"Fruit", unit:"1 cup (152g)", kcal:46},
+
+    // Vegetables
+    {name:"Broccoli", cat:"Vegetable", unit:"1 cup cooked (156g)", kcal:55},
+    {name:"Carrot", cat:"Vegetable", unit:"1 medium (61g)", kcal:25},
+    {name:"Spinach", cat:"Vegetable", unit:"1 cup raw (30g)", kcal:7},
+    {name:"Potato (baked)", cat:"Vegetable", unit:"1 medium (173g)", kcal:161},
+    {name:"Sweet potato", cat:"Vegetable", unit:"1 medium (130g)", kcal:112},
+    {name:"Tomato", cat:"Vegetable", unit:"1 medium (123g)", kcal:22},
+    {name:"Cucumber", cat:"Vegetable", unit:"1 cup sliced (104g)", kcal:16},
+
+    // Grains
+    {name:"White rice, cooked", cat:"Grain", unit:"1 cup (158g)", kcal:205},
+    {name:"Brown rice, cooked", cat:"Grain", unit:"1 cup (195g)", kcal:216},
+    {name:"Oatmeal", cat:"Grain", unit:"1 cup cooked (234g)", kcal:158},
+    {name:"White bread", cat:"Grain", unit:"1 slice (28g)", kcal:75},
+    {name:"Whole wheat bread", cat:"Grain", unit:"1 slice (28g)", kcal:69},
+    {name:"Pasta, cooked", cat:"Grain", unit:"1 cup (140g)", kcal:221},
+    {name:"Chapati / roti", cat:"Grain", unit:"1 piece (40g)", kcal:104},
+    {name:"Quinoa, cooked", cat:"Grain", unit:"1 cup (185g)", kcal:222},
+
+    // Protein
+    {name:"Chicken breast", cat:"Protein", unit:"100g cooked", kcal:165},
+    {name:"Egg", cat:"Protein", unit:"1 large", kcal:78},
+    {name:"Salmon", cat:"Protein", unit:"100g cooked", kcal:208},
+    {name:"Paneer", cat:"Protein", unit:"100g", kcal:265},
+    {name:"Tofu", cat:"Protein", unit:"100g", kcal:76},
+    {name:"Lentils (dal), cooked", cat:"Protein", unit:"1 cup (198g)", kcal:230},
+    {name:"Chickpeas, cooked", cat:"Protein", unit:"1 cup (164g)", kcal:269},
+    {name:"Ground beef (80/20)", cat:"Protein", unit:"100g cooked", kcal:254},
+    {name:"Shrimp", cat:"Protein", unit:"100g cooked", kcal:99},
+
+    // Dairy
+    {name:"Milk, whole", cat:"Dairy", unit:"1 cup (244g)", kcal:149},
+    {name:"Greek yogurt, plain", cat:"Dairy", unit:"1 cup (245g)", kcal:150},
+    {name:"Cheddar cheese", cat:"Dairy", unit:"1 slice (28g)", kcal:113},
+    {name:"Butter", cat:"Dairy", unit:"1 tbsp (14g)", kcal:102},
+
+    // Snacks & other
+    {name:"Almonds", cat:"Snack", unit:"1 oz / 23 nuts (28g)", kcal:164},
+    {name:"Peanut butter", cat:"Snack", unit:"2 tbsp (32g)", kcal:188},
+    {name:"Dark chocolate", cat:"Snack", unit:"1 oz (28g)", kcal:170},
+    {name:"Potato chips", cat:"Snack", unit:"1 oz (28g)", kcal:152},
+    {name:"Pizza (cheese)", cat:"Snack", unit:"1 slice (107g)", kcal:285},
+    {name:"French fries", cat:"Snack", unit:"medium serving (117g)", kcal:365},
+    {name:"Coffee, black", cat:"Drink", unit:"1 cup (240ml)", kcal:2},
+    {name:"Cola", cat:"Drink", unit:"1 can (355ml)", kcal:140},
+    {name:"Orange juice", cat:"Drink", unit:"1 cup (248ml)", kcal:112},
+    {name:"Beer", cat:"Drink", unit:"1 can (355ml)", kcal:153},
+  ];
+
+  const categories = ["All", ...Array.from(new Set(FOODS.map(f=>f.cat)))];
+  let activeCategory = "All";
+  let searchTerm = "";
+  let ledger = []; // {name, unit, kcal, qty}
+
+  const foodListEl = document.getElementById('foodList');
+  const categoryBarEl = document.getElementById('categoryBar');
+  const searchInput = document.getElementById('searchInput');
+  const receiptItemsEl = document.getElementById('receiptItems');
+  const receiptEmptyEl = document.getElementById('receiptEmpty');
+  const itemCountEl = document.getElementById('itemCount');
+  const grandTotalEl = document.getElementById('grandTotal');
+  const statusLineEl = document.getElementById('statusLine');
+  const gaugeFillEl = document.getElementById('gaugeFill');
+  const goalInput = document.getElementById('goalInput');
+  const clearBtn = document.getElementById('clearBtn');
+  const dateLine = document.getElementById('dateLine');
+
+  dateLine.textContent = new Date().toLocaleDateString(undefined, { weekday:'long', year:'numeric', month:'short', day:'numeric' });
+
+  function renderCategories(){
+    categoryBarEl.innerHTML = '';
+    categories.forEach(cat=>{
+      const btn = document.createElement('button');
+      btn.className = 'chip' + (cat===activeCategory ? ' active' : '');
+      btn.textContent = cat;
+      btn.onclick = () => { activeCategory = cat; renderCategories(); renderFoodList(); };
+      categoryBarEl.appendChild(btn);
+    });
+  }
+
+  function renderFoodList(){
+    const term = searchTerm.trim().toLowerCase();
+    const filtered = FOODS.filter(f=>{
+      const matchesCat = activeCategory === "All" || f.cat === activeCategory;
+      const matchesTerm = !term || f.name.toLowerCase().includes(term);
+      return matchesCat && matchesTerm;
+    });
+
+    foodListEl.innerHTML = '';
+    if(filtered.length === 0){
+      const div = document.createElement('div');
+      div.className = 'empty-note';
+      div.textContent = 'No foods match — try a different search.';
+      foodListEl.appendChild(div);
+      return;
+    }
+
+    filtered.forEach(f=>{
+      const row = document.createElement('div');
+      row.className = 'food-row';
+      row.innerHTML = `
+        <div class="food-info">
+          <div class="name">${f.name}</div>
+          <div class="meta">${f.unit} · ${f.kcal} kcal</div>
+        </div>
+        <button class="add-btn">+ Add</button>
+      `;
+      row.querySelector('.add-btn').onclick = () => addToLedger(f);
+      foodListEl.appendChild(row);
+    });
+  }
+
+  function addToLedger(food){
+    const existing = ledger.find(item => item.name === food.name);
+    if(existing){
+      existing.qty += 1;
+    } else {
+      ledger.push({ name: food.name, unit: food.unit, kcal: food.kcal, qty: 1 });
+    }
+    renderReceipt();
+  }
+
+  function changeQty(name, delta){
+    const item = ledger.find(i => i.name === name);
+    if(!item) return;
+    item.qty += delta;
+    if(item.qty <= 0){
+      ledger = ledger.filter(i => i.name !== name);
+    }
+    renderReceipt();
+  }
+
+  function removeItem(name){
+    ledger = ledger.filter(i => i.name !== name);
+    renderReceipt();
+  }
+
+  function renderReceipt(){
+    receiptItemsEl.innerHTML = '';
+    if(ledger.length === 0){
+      receiptEmptyEl.style.display = 'block';
+    } else {
+      receiptEmptyEl.style.display = 'none';
+      ledger.forEach(item=>{
+        const row = document.createElement('div');
+        row.className = 'receipt-item';
+        row.innerHTML = `
+          <div class="left">
+            <div class="iname">${item.name}</div>
+            <div class="qtyline">
+              <button class="qty-btn" data-action="minus">−</button>
+              <span>${item.qty} × ${item.unit}</span>
+              <button class="qty-btn" data-action="plus">+</button>
+              <button class="remove-x">✕</button>
+            </div>
+          </div>
+          <div class="price">${item.kcal * item.qty} kcal</div>
+        `;
+        row.querySelector('[data-action="minus"]').onclick = () => changeQty(item.name, -1);
+        row.querySelector('[data-action="plus"]').onclick = () => changeQty(item.name, 1);
+        row.querySelector('.remove-x').onclick = () => removeItem(item.name);
+        receiptItemsEl.appendChild(row);
+      });
+    }
+
+    const total = ledger.reduce((sum, i) => sum + i.kcal * i.qty, 0);
+    const count = ledger.reduce((sum, i) => sum + i.qty, 0);
+    const goal = Math.max(0, Number(goalInput.value) || 0);
+
+    itemCountEl.textContent = count;
+    grandTotalEl.textContent = total.toLocaleString() + ' kcal';
+
+    const pct = goal > 0 ? Math.min(150, (total / goal) * 100) : 0;
+    gaugeFillEl.style.width = Math.min(100, pct) + '%';
+
+    if(goal === 0){
+      statusLineEl.textContent = '';
+      gaugeFillEl.classList.remove('over');
+    } else if(total <= goal){
+      statusLineEl.textContent = `${(goal - total).toLocaleString()} kcal left today`;
+      statusLineEl.className = 'status-line under';
+      gaugeFillEl.classList.remove('over');
+    } else {
+      statusLineEl.textContent = `${(total - goal).toLocaleString()} kcal over today's goal`;
+      statusLineEl.className = 'status-line over';
+      gaugeFillEl.classList.add('over');
+    }
+  }
+
+  searchInput.addEventListener('input', e => {
+    searchTerm = e.target.value;
+    renderFoodList();
+  });
+
+  goalInput.addEventListener('input', renderReceipt);
+
+  clearBtn.addEventListener('click', () => {
+    ledger = [];
+    renderReceipt();
+  });
+
+  renderCategories();
+  renderFoodList();
+  renderReceipt();
+</script>
+</body>
+</html>
